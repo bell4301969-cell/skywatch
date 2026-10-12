@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Skywatch Live</title>
+  <meta name="description" content="Live weather, satellite imagery, radar, hourly and 7-day forecasts for anywhere on Earth.">
+  <meta name="theme-color" content="#0b6fa4">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><img src="icons/icon-192.png" alt="" width="28" height="28"><span>Skywatch</span></div>
+    <form class="search" id="search" role="search" autocomplete="off">
+      <input id="search-input" type="search" placeholder="Search a city or place…" aria-label="Search location" aria-controls="search-results">
+      <ul id="search-results" class="search-results" role="listbox" hidden></ul>
+    </form>
+    <button id="locate" class="icon-btn" type="button" title="Use my precise location" aria-label="Use my precise location">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+    </button>
+    <div class="units" role="group" aria-label="Units">
+      <button type="button" data-units="metric" aria-pressed="true">°C</button>
+      <button type="button" data-units="imperial" aria-pressed="false">°F</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="error" class="error" role="alert" hidden></div>
+
+    <section class="card now" aria-labelledby="place">
+      <div class="now-head">
+        <div>
+          <h1 id="place">Loading…</h1>
+          <p class="muted" id="place-sub"></p>
+        </div>
+        <div class="live" title="Data refreshes automatically every 5 minutes">
+          <span class="dot"></span><span id="updated">Live</span>
+          <button id="refresh" class="link-btn" type="button">Refresh</button>
+        </div>
+      </div>
+      <div class="now-main">
+        <div class="now-icon" id="now-icon" aria-hidden="true"></div>
+        <div>
+          <div class="now-temp" id="now-temp">--</div>
+          <div class="now-cond" id="now-cond"></div>
+          <div class="muted" id="now-feels"></div>
+        </div>
+      </div>
+      <div class="nowcast">
+        <div class="nowcast-head"><strong>Next 2 hours</strong> <span class="muted" id="nowcast-text"></span></div>
+        <div class="nowcast-bars" id="nowcast-bars"></div>
+      </div>
+      <dl class="stats" id="stats"></dl>
+    </section>
+
+    <section class="card" aria-labelledby="hourly-title">
+      <h2 id="hourly-title">Hourly forecast <span class="muted small">next 48 hours</span></h2>
+      <div class="hourly-scroll" id="hourly" tabindex="0" aria-label="Hourly forecast, scroll horizontally"></div>
+    </section>
+
+    <section class="card" aria-labelledby="daily-title">
+      <h2 id="daily-title">7-day forecast</h2>
+      <ol class="daily" id="daily"></ol>
+    </section>
+
+    <section class="card map-card" aria-labelledby="map-title">
+      <div class="map-head">
+        <h2 id="map-title">Satellite &amp; radar</h2>
+        <div class="seg" role="group" aria-label="Map layer" id="modes">
+          <button type="button" data-mode="geocolor" aria-pressed="true">True colour</button>
+          <button type="button" data-mode="infrared" aria-pressed="false">Infrared</button>
+          <button type="button" data-mode="radar" aria-pressed="false">Radar</button>
+          <button type="button" data-mode="daily" aria-pressed="false">Daily</button>
+        </div>
+      </div>
+      <div id="map" class="map" aria-label="Satellite map"></div>
+      <div class="timeline">
+        <button id="play" class="icon-btn" type="button" aria-label="Play animation">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path id="play-icon" d="M7 4l13 8-13 8z" fill="currentColor"/></svg>
+        </button>
+        <input id="frame" type="range" min="0" max="0" value="0" aria-label="Animation frame">
+        <span id="frame-time" class="frame-time">--</span>
+      </div>
+      <p class="muted small" id="map-note"></p>
+    </section>
+  </main>
+
+  <footer class="muted small">
+    Forecast data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> ·
+    Satellite: <a href="https://www.earthdata.nasa.gov/gibs" target="_blank" rel="noopener">NASA GIBS</a> (GOES / Himawari / VIIRS) ·
+    Radar: <a href="https://www.rainviewer.com/" target="_blank" rel="noopener">RainViewer</a> ·
+    Hosted on Cloudflare Workers
+  </footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="app.js" type="module"></script>
+</body>
+</html>
