@@ -1,10 +1,13 @@
 // Skywatch Live service worker: caches the app shell so it opens instantly and offline.
 // Weather, satellite and radar data always come from the network (they must be live).
-const CACHE = "skywatch-v1";
+const CACHE = "skywatch-v2";
 const SHELL = [
   "./",
   "./index.html",
+  "./app.js",
+  "./styles.css",
   "./manifest.webmanifest",
+  "./icons/icon-180.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css",
