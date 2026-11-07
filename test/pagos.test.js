@@ -14,9 +14,9 @@ test("parseMonto acepta formatos comunes", () => {
 });
 
 test("formatMonto y formatFecha coinciden con el estilo de la app", () => {
-  assert.equal(formatMonto(9500000), "US$95,000.00");
-  assert.equal(formatMonto(500000), "US$5,000.00");
-  assert.equal(formatMonto(7), "US$0.07");
+  assert.equal(formatMonto(9500000), "RD$95,000.00");
+  assert.equal(formatMonto(500000), "RD$5,000.00");
+  assert.equal(formatMonto(7), "RD$0.07");
   assert.equal(formatFecha("2026-11-07"), "07 nov de 2026");
 });
 
@@ -54,5 +54,5 @@ test("validarEstado rechaza datos dañados", () => {
   assert.equal(validarEstado(null), null);
   assert.equal(validarEstado({ deuda: -1, pagos: [] }), null);
   assert.equal(validarEstado({ deuda: 1, pagos: [{ fecha: "ayer", monto: 1 }] }), null);
-  assert.deepEqual(validarEstado({ deuda: 5, pagos: [] }), { deuda: 5, deudaActualizada: 0, pagos: [] });
+  assert.deepEqual(validarEstado({ deuda: 5, pagos: [] }), { nombre: "Control de Pagos", nombreActualizado: 0, deuda: 5, deudaActualizada: 0, pagos: [] });
 });

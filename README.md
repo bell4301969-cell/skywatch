@@ -16,22 +16,23 @@ A real-time weather app that runs on **Cloudflare Workers**. It shows:
 
 ## Control de Pagos (`/pagos/`)
 
-A second, standalone app served from the same Worker at `/pagos/` (Spanish UI). It tracks the payoff of a single debt:
+A second, standalone app served from the same Worker at `/pagos/` (Spanish UI). It is a clone of the "Control de Pagos" app built on Hark (same layout, colours, typography, texts and behaviour) and tracks the payoff of a single debt in Dominican pesos (RD$):
 
-- **Saldo restante por pagar**: the remaining balance, with a progress bar and the percentage paid.
-- **Cantidad adeudada**: set or change the total owed; every payment is subtracted from it.
-- **Registrar un pago**: deposit date (defaults to today), amount and an optional note.
-- **Pagos registrados**: table of payments (newest first) with **Editar** to change or delete one (with undo), and the running total.
-- Overpayment shows as *saldo a favor*. Amounts are stored in cents to avoid rounding errors.
-- Menu (⋯): export to CSV, download/restore a JSON backup, erase everything.
-- Data is kept on the device (`localStorage`); the app works offline and can be installed as a PWA.
+- **Saldo restante por pagar**: the remaining balance in large serif type, with a progress bar and the percentage paid. It shows *Pagado por completo* once the debt is paid off, and any *Excedente pagado* (overpayment).
+- **Cantidad adeudada / Total pagado** cards, and a form to set the total owed. Every payment is subtracted from it.
+- **Registrar un pago**: deposit date (defaults to today), amount and an optional **comprobante**: a screenshot of the receipt, downscaled on the device to 1280 px JPEG.
+- **Pagos registrados**: newest first, with each receipt thumbnail (or *+ Comprobante*), inline **Editar** (date, amount, note, replace or remove the receipt) and **Eliminar** with a confirmation dialog and undo.
+- **Comprobantes** tab: a grid of every receipt, opening in a full-screen viewer with *Reemplazar* and *Quitar*.
+- Tap the title to rename the app. Menu (⋯): *Cambiar nombre*, *Exportar datos (JSON)* / *Importar datos* (the same format as the Hark app, receipts included, so a Hark export imports directly; old backups also work), *Exportar a CSV*, *Sincronización…* and *Borrar todo*.
+- Amounts are stored in cents to avoid rounding errors.
+- Data is kept on the device (`localStorage`); the app works offline and can be installed as a PWA. Receipt images are stored separately and only on each device. They are never synced, so the sync payload stays small.
 - **Sincronización (Cloudflare D1)**, optional, from ⋯ → *Sincronización…*:
   - *Activar en este dispositivo* creates a secret 16-character code (e.g. `ABCD-EFGH-JKLM-NPQR`, 80 bits). Any device that enters the code, or opens the *Copiar enlace* link (`/pagos/#codigo=…`; the code stays in the URL fragment and is never sent in a request URL), shares the same ledger.
   - The Worker merges per payment, keeping the most recent change. Deletes are kept as tombstones so they propagate. Edits made offline on two devices are merged, not overwritten. Writes use optimistic versioning, so simultaneous syncs re-merge instead of losing data.
   - Syncs run after every change, on load, when the tab becomes visible, on reconnect and every 60 s.
   - D1 stores only the SHA-256 of the code. Anyone with the code can read and change that ledger, so treat it like a password.
 
-Files: `public/pagos/` (`calc.js` holds the pure logic shared with the Worker), `src/pagos.js` (sync API), `migrations/0001_pagos.sql`; tests in `test/pagos*.test.js`.
+Files: `public/pagos/` (`calc.js` holds the pure logic shared with the Worker), `src/pagos.js` (sync API), `migrations/0001_pagos.sql`; tests in `test/pagos*.test.js`. The app name is synced too: the most recent rename wins.
 
 ## Architecture
 

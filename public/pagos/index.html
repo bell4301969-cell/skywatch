@@ -1,150 +1,211 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-theme="light">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Control de Pagos</title>
-  <meta name="description" content="Lleva el control de una deuda: registra cada pago y ve el saldo restante.">
-  <meta name="theme-color" content="#f6f5f1">
+  <meta name="description" content="Lleva el control de una deuda: registra cada pago con su comprobante y ve el saldo restante.">
+  <meta name="theme-color" content="#f7f4ee">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Instrument+Serif&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="bar">
-    <h1>Control de Pagos</h1>
-    <button id="menu-btn" class="icon-btn" type="button" aria-label="Más opciones" aria-haspopup="true" aria-expanded="false">
-      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="5" cy="12" r="1.8" fill="currentColor"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/><circle cx="19" cy="12" r="1.8" fill="currentColor"/></svg>
-    </button>
-    <div id="menu" class="menu" role="menu" hidden>
-      <button type="button" role="menuitem" data-action="sync">Sincronización…</button>
-      <button type="button" role="menuitem" data-action="csv">Exportar a CSV</button>
-      <button type="button" role="menuitem" data-action="backup">Descargar respaldo</button>
-      <button type="button" role="menuitem" data-action="restore">Restaurar respaldo…</button>
-      <button type="button" role="menuitem" data-action="reset" class="danger">Borrar todo</button>
-    </div>
-    <input id="restore-file" type="file" accept="application/json,.json" hidden>
-  </header>
-
-  <main>
-    <button id="sync-chip" class="sync-chip" type="button" hidden aria-label="Estado de la sincronización">
-      <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4.75 4.75 0 0 1-.5 9.5H7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-      <span id="sync-chip-text"></span>
-    </button>
-
-    <section class="hero" aria-live="polite">
-      <p class="label" id="hero-label">Saldo restante por pagar</p>
-      <p class="big" id="restante">US$0.00</p>
-      <div class="progress" role="progressbar" aria-labelledby="progreso-txt" aria-valuemin="0" aria-valuemax="100" id="progress">
-        <span id="progress-fill"></span>
-      </div>
-      <p class="sub" id="progreso-txt">0.0% pagado de US$0.00</p>
-    </section>
-
-    <section class="stats">
-      <div class="card stat">
-        <p class="label">Cantidad adeudada</p>
-        <p class="num" id="deuda">US$0.00</p>
-      </div>
-      <div class="card stat">
-        <p class="label">Total pagado</p>
-        <p class="num green" id="pagado">US$0.00</p>
-        <p class="tiny" id="ultimo">sin pagos registrados</p>
-      </div>
-    </section>
-
-    <section class="card">
-      <h2>Cantidad adeudada</h2>
-      <p class="help">El monto total que se debe. Cada pago que registres se resta de esta cantidad.</p>
-      <form id="deuda-form" class="row" novalidate>
-        <input id="deuda-input" inputmode="decimal" autocomplete="off" placeholder="Monto total" aria-label="Cantidad adeudada">
-        <button class="btn" type="submit">Guardar</button>
-      </form>
-      <p class="error" id="deuda-error" hidden></p>
-    </section>
-
-    <section class="card">
-      <h2>Registrar un pago</h2>
-      <form id="pago-form" novalidate>
-        <div class="row two">
-          <label>Fecha del depósito<input id="pago-fecha" type="date" required></label>
-          <label>Monto del pago<input id="pago-monto" inputmode="decimal" autocomplete="off" placeholder="Monto"></label>
-        </div>
-        <label>Nota <span class="opt">(opcional)</span><input id="pago-nota" maxlength="200" autocomplete="off" placeholder="Ej. transferencia, cheque #123"></label>
-        <p class="error" id="pago-error" hidden></p>
-        <button class="btn wide" type="submit">Agregar pago</button>
-      </form>
-    </section>
-
-    <section>
-      <h2 class="serif">Pagos registrados</h2>
-      <div class="card table-card">
-        <table>
-          <thead><tr><th scope="col">Fecha</th><th scope="col" class="r">Monto</th><th scope="col"><span class="sr">Acciones</span></th></tr></thead>
-          <tbody id="pagos-body"></tbody>
-          <tfoot><tr><th scope="row">Total pagado</th><td class="r green strong" id="total-foot">US$0.00</td><td></td></tr></tfoot>
-        </table>
-        <p class="empty" id="empty">Todavía no hay pagos. Registra el primero arriba.</p>
-      </div>
-    </section>
-  </main>
-
-  <dialog id="edit-dialog">
-    <form id="edit-form" method="dialog" novalidate>
-      <h2>Editar pago</h2>
-      <label>Fecha del depósito<input id="edit-fecha" type="date" required></label>
-      <label>Monto del pago<input id="edit-monto" inputmode="decimal" autocomplete="off"></label>
-      <label>Nota <span class="opt">(opcional)</span><input id="edit-nota" maxlength="200" autocomplete="off"></label>
-      <p class="error" id="edit-error" hidden></p>
-      <div class="dialog-actions">
-        <button type="button" class="btn danger-outline" id="edit-delete">Eliminar</button>
-        <span class="spacer"></span>
-        <button type="button" class="btn ghost" id="edit-cancel">Cancelar</button>
-        <button type="submit" class="btn">Guardar</button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog id="sync-dialog" aria-labelledby="sync-title">
-    <div class="dialog-head">
-      <h2 id="sync-title">Sincronización</h2>
-      <button type="button" class="icon-btn close" id="sync-close" aria-label="Cerrar">
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+  <div class="x-app">
+    <header class="x-top">
+      <span class="x-iconbtn" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+      </span>
+      <h1>
+        <button type="button" class="x-title" id="title-btn" aria-label="Cambiar nombre: Control de Pagos">
+          <b class="x-title__txt" id="app-name">Control de Pagos</b>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
+        </button>
+      </h1>
+      <button class="x-iconbtn" id="menu-btn" type="button" aria-label="Más opciones" aria-haspopup="true" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
       </button>
-    </div>
+      <div class="x-menu" id="menu" role="menu" hidden>
+        <button type="button" role="menuitem" id="m-rename">Cambiar nombre</button>
+        <hr>
+        <button type="button" role="menuitem" id="m-export">Exportar datos (JSON)</button>
+        <label role="menuitem" for="import-file">Importar datos</label>
+        <button type="button" role="menuitem" id="m-csv">Exportar a CSV</button>
+        <hr>
+        <button type="button" role="menuitem" id="m-sync">Sincronización…</button>
+        <hr>
+        <button type="button" role="menuitem" class="x-danger" id="m-clear">Borrar todo</button>
+      </div>
+      <input type="file" id="import-file" accept="application/json,.json" class="x-sr" tabindex="-1">
+    </header>
 
-    <div id="sync-off">
-      <p class="help">Guarda tus pagos en la nube y úsalos en el teléfono, la computadora o con otra persona. Los dispositivos se vinculan con un código secreto: quien tenga el código puede ver y cambiar los datos.</p>
-      <button type="button" class="btn wide" id="sync-create">Activar en este dispositivo</button>
-      <p class="divider"><span>o, si ya tienes un código</span></p>
-      <form id="sync-join" class="row" novalidate>
-        <input id="sync-join-input" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX" aria-label="Código de sincronización">
-        <button type="submit" class="btn" id="sync-join-btn">Vincular</button>
+    <main class="x-body" id="view-pagos">
+      <button id="sync-chip" class="x-chip" type="button" hidden aria-label="Estado de la sincronización">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 18 8.5a4.75 4.75 0 0 1-.5 9.5H7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        <span id="sync-chip-text"></span>
+      </button>
+
+      <section class="x-summary" aria-live="polite">
+        <p class="x-label" id="remain-label">Saldo restante por pagar</p>
+        <p class="x-big" id="remain">RD$0.00</p>
+        <div class="x-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-labelledby="pct" id="bar"><span id="bar-fill"></span></div>
+        <p class="x-caption" id="pct">0.0% pagado de RD$0.00</p>
+        <p class="x-excess" id="excess" hidden></p>
+      </section>
+
+      <div class="x-stats">
+        <div class="x-card x-stat">
+          <p class="x-label">Cantidad adeudada</p>
+          <p class="x-fig" id="owed-fig">RD$0.00</p>
+        </div>
+        <div class="x-card x-stat">
+          <p class="x-label">Total pagado</p>
+          <p class="x-fig is-green" id="paid-fig">RD$0.00</p>
+          <p class="x-caption">hasta el último pago registrado</p>
+        </div>
+      </div>
+
+      <form class="x-card" id="owed-form" novalidate>
+        <h2>Cantidad adeudada</h2>
+        <p class="x-help">El monto total que se debe. Cada pago que registres se resta de esta cantidad.</p>
+        <div class="x-row">
+          <input class="x-input" id="owed-input" aria-label="Cantidad adeudada" inputmode="decimal" autocomplete="off" placeholder="100000">
+          <button class="x-btn" type="submit">Guardar</button>
+        </div>
+        <p class="x-error" id="owed-err"></p>
+        <p class="x-ok" id="owed-ok"></p>
       </form>
-      <p class="tiny">Al vincular, los pagos de este dispositivo se combinan con los de la nube; no se pierde nada.</p>
-    </div>
 
-    <div id="sync-on" hidden>
-      <p class="label">Código de sincronización</p>
-      <p class="code" id="sync-code"></p>
-      <div class="row wrap">
-        <button type="button" class="btn ghost" id="sync-copy">Copiar código</button>
-        <button type="button" class="btn ghost" id="sync-copy-link">Copiar enlace</button>
+      <form class="x-card" id="pay-form" novalidate>
+        <h2>Registrar un pago</h2>
+        <div class="x-grid2">
+          <label class="x-field"><span>Fecha del depósito</span><input class="x-input" id="pay-date" type="date"></label>
+          <label class="x-field"><span>Monto del pago</span><input class="x-input" id="pay-amt" inputmode="decimal" autocomplete="off" placeholder="Monto"></label>
+        </div>
+        <div class="x-field x-attach">
+          <span>Comprobante (captura del recibo) · opcional</span>
+          <label for="pay-file" tabindex="0" class="x-btn x-btn--ghost x-btn--full x-attach-btn" id="pay-attach">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-8 8"/></svg>Adjuntar captura</label>
+          <p class="x-caption" id="pay-rc-hint" style="margin:0" aria-live="polite"></p>
+          <div class="x-rcprev" id="pay-rc-prev" hidden>
+            <img id="pay-rc-img" alt="Vista previa del comprobante" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7">
+            <p id="pay-rc-msg">Captura lista. Se guardará con el pago.</p>
+            <button type="button" class="x-btn x-btn--sm x-btn--ghost" id="pay-rc-remove">Quitar</button>
+          </div>
+          <input type="file" id="pay-file" accept="image/*" class="x-sr" tabindex="-1" aria-hidden="true">
+        </div>
+        <button class="x-btn x-btn--full" type="submit">Agregar pago</button>
+        <p class="x-error" id="pay-err"></p>
+      </form>
+
+      <h2 class="x-h2">Pagos registrados</h2>
+      <div class="x-card">
+        <table class="x-table">
+          <thead><tr><th scope="col">Fecha</th><th scope="col" class="x-amt">Monto</th><td class="x-act" aria-hidden="true"></td></tr></thead>
+          <tbody id="rows"></tbody>
+          <tfoot><tr><td>Total pagado</td><td class="x-amt" id="foot-total">RD$0.00</td><td></td></tr></tfoot>
+        </table>
       </div>
-      <p class="tiny">Escribe el código (o abre el enlace) en el otro dispositivo. Guárdalo en un lugar seguro: es la única llave de tus datos.</p>
-      <p class="status" id="sync-status" aria-live="polite"></p>
-      <button type="button" class="btn wide" id="sync-now">Sincronizar ahora</button>
-      <div class="row wrap end">
-        <button type="button" class="link-btn" id="sync-unlink">Desvincular este dispositivo</button>
-        <button type="button" class="link-btn danger" id="sync-delete">Eliminar datos de la nube</button>
+      <input type="file" id="rc-file" accept="image/*" class="x-sr" tabindex="-1" aria-hidden="true">
+    </main>
+
+    <main class="x-body" id="view-rec" hidden>
+      <h2 class="x-h2">Comprobantes</h2>
+      <p class="x-help" id="rec-count" style="margin:0 4px"></p>
+      <div id="rec-grid"></div>
+    </main>
+
+    <dialog class="x-viewer" id="viewer" aria-label="Comprobante de pago">
+      <div class="x-viewer__img"><img id="v-img" alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"></div>
+      <div class="x-viewer__bar">
+        <div>
+          <p class="x-viewer__amt" id="v-amt"></p>
+          <p class="x-viewer__date" id="v-date"></p>
+        </div>
+        <div class="x-row">
+          <button type="button" class="x-btn x-btn--dark" id="v-repl">Reemplazar</button>
+          <button type="button" class="x-btn x-btn--dark" id="v-rem">Quitar</button>
+          <button type="button" class="x-btn x-btn--light" id="v-close">Cerrar</button>
+        </div>
       </div>
-    </div>
+    </dialog>
 
-    <p class="error" id="sync-error" hidden></p>
-  </dialog>
+    <dialog class="x-dialog" id="name-dialog" aria-labelledby="name-h">
+      <form method="dialog" id="name-form" novalidate>
+        <p class="x-dialog__h" id="name-h">Cambiar nombre</p>
+        <label class="x-field"><span>Nombre de la app</span><input class="x-input" id="name-input" type="text" maxlength="60" autocomplete="off" placeholder="Control de Pagos"></label>
+        <div class="x-row">
+          <button type="button" class="x-btn x-btn--ghost" id="name-cancel">Cancelar</button>
+          <button class="x-btn" value="ok">Guardar</button>
+        </div>
+      </form>
+    </dialog>
 
-  <div id="toast" class="toast" role="status" hidden></div>
+    <dialog class="x-dialog" id="del-dialog" aria-labelledby="del-msg">
+      <form method="dialog">
+        <p id="del-msg">¿Eliminar este pago?</p>
+        <div class="x-row">
+          <button class="x-btn x-btn--ghost" value="cancel" autofocus>Cancelar</button>
+          <button class="x-btn x-btn--del-solid" value="ok">Eliminar</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="x-dialog x-dialog--wide" id="sync-dialog" aria-labelledby="sync-title">
+      <div class="x-dialog__head">
+        <p class="x-dialog__h" id="sync-title">Sincronización</p>
+        <button type="button" class="x-iconbtn" id="sync-close" aria-label="Cerrar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+
+      <div id="sync-off">
+        <p class="x-help">Guarda tus pagos en la nube y úsalos en el teléfono, la computadora o con otra persona. Los dispositivos se vinculan con un código secreto: quien tenga el código puede ver y cambiar los datos.</p>
+        <button type="button" class="x-btn x-btn--full" id="sync-create">Activar en este dispositivo</button>
+        <p class="x-divider"><span>o, si ya tienes un código</span></p>
+        <form id="sync-join" class="x-row" novalidate>
+          <input class="x-input" id="sync-join-input" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX" aria-label="Código de sincronización">
+          <button type="submit" class="x-btn" id="sync-join-btn">Vincular</button>
+        </form>
+        <p class="x-caption">Al vincular, los pagos de este dispositivo se combinan con los de la nube; no se pierde nada.</p>
+      </div>
+
+      <div id="sync-on" hidden>
+        <p class="x-label">Código de sincronización</p>
+        <p class="x-code" id="sync-code"></p>
+        <div class="x-row">
+          <button type="button" class="x-btn x-btn--ghost x-btn--sm" id="sync-copy">Copiar código</button>
+          <button type="button" class="x-btn x-btn--ghost x-btn--sm" id="sync-copy-link">Copiar enlace</button>
+        </div>
+        <p class="x-caption">Escribe el código (o abre el enlace) en el otro dispositivo. Guárdalo en un lugar seguro: es la única llave de tus datos.</p>
+        <p class="x-status" id="sync-status" aria-live="polite"></p>
+        <button type="button" class="x-btn x-btn--full" id="sync-now">Sincronizar ahora</button>
+        <div class="x-links">
+          <button type="button" class="x-link" id="sync-unlink">Desvincular este dispositivo</button>
+          <button type="button" class="x-link x-link--danger" id="sync-delete">Eliminar datos de la nube</button>
+        </div>
+      </div>
+      <p class="x-caption">Las capturas de los comprobantes se quedan en cada dispositivo; no se suben a la nube.</p>
+      <p class="x-error" id="sync-error"></p>
+    </dialog>
+
+    <div id="toast" class="x-toast" role="status" hidden></div>
+
+    <nav class="x-tabs" aria-label="Secciones">
+      <button type="button" class="x-tab is-active" id="tab-pagos" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg>
+        <small>Pagos</small>
+      </button>
+      <button type="button" class="x-tab" id="tab-rec">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>
+        <small>Comprobantes</small>
+      </button>
+    </nav>
+  </div>
 
   <script type="module" src="app.js"></script>
 </body>

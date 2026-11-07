@@ -25,7 +25,7 @@ export function formatMonto(cents) {
   const neg = cents < 0;
   const abs = Math.abs(cents);
   const ent = Math.floor(abs / 100).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return `${neg ? "-" : ""}US$${ent}.${String(abs % 100).padStart(2, "0")}`;
+  return `${neg ? "-" : ""}RD$${ent}.${String(abs % 100).padStart(2, "0")}`;
 }
 
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sept", "oct", "nov", "dic"];
@@ -77,6 +77,12 @@ export function toCSV(state) {
 }
 
 export const MAX_PAGOS = 5000;
+export const NOMBRE_DEFECTO = "Control de Pagos";
+
+export function limpiarNombre(n) {
+  const s = typeof n === "string" ? n.trim().slice(0, 60) : "";
+  return s || NOMBRE_DEFECTO;
+}
 
 // Valida y normaliza un estado leído de localStorage, de un respaldo importado o del servidor.
 // Los pagos borrados se conservan como "lápidas" (borrado: true) para que el borrado se
@@ -96,7 +102,13 @@ export function validarEstado(obj) {
     if (p.borrado) pago.borrado = true;
     pagos.push(pago);
   }
-  return { deuda: obj.deuda, deudaActualizada: Number(obj.deudaActualizada) || 0, pagos };
+  return {
+    nombre: limpiarNombre(obj.nombre),
+    nombreActualizado: Number(obj.nombreActualizado) || 0,
+    deuda: obj.deuda,
+    deudaActualizada: Number(obj.deudaActualizada) || 0,
+    pagos
+  };
 }
 
 // Fusiona dos copias del mismo libro: gana el cambio más reciente de cada pago y de la deuda.
@@ -104,12 +116,16 @@ export function validarEstado(obj) {
 export function fusionar(a, b) {
   const deudaDeB = b.deudaActualizada > a.deudaActualizada ||
     (b.deudaActualizada === a.deudaActualizada && b.deuda > a.deuda);
+  const na = a.nombreActualizado || 0, nb = b.nombreActualizado || 0;
+  const nombreDeB = nb > na || (nb === na && limpiarNombre(b.nombre) > limpiarNombre(a.nombre));
   const porId = new Map();
   for (const p of [...a.pagos, ...b.pagos]) {
     const actual = porId.get(p.id);
     if (!actual || gana(p, actual)) porId.set(p.id, p);
   }
   return {
+    nombre: limpiarNombre(nombreDeB ? b.nombre : a.nombre),
+    nombreActualizado: Math.max(na, nb),
     deuda: deudaDeB ? b.deuda : a.deuda,
     deudaActualizada: Math.max(a.deudaActualizada, b.deudaActualizada),
     pagos: [...porId.values()].sort((x, y) => x.creado - y.creado || (x.id < y.id ? -1 : 1))
@@ -136,4 +152,60 @@ export function normalizarCodigo(text) {
   const s = String(text || "").toUpperCase().replace(/[^0-9A-Z]/g, "");
   if (s.length !== 16 || [...s].some((ch) => !ALFABETO.includes(ch))) return null;
   return s.match(/.{4}/g).join("-");
+}
+
+// ---------- Respaldo JSON ----------
+// El formato de exportación es el de la app original de Hark: importes en pesos (con decimales)
+// y la captura del comprobante como data URL dentro de cada pago.
+const RECIBO_RE = /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+/=]+$/;
+export const esRecibo = (s) => typeof s === "string" && s.length < 8_000_000 && RECIBO_RE.test(s);
+
+export function aRespaldo(state, recibos = {}, exportado = new Date().toISOString()) {
+  return {
+    app: "Control de Pagos",
+    name: limpiarNombre(state.nombre),
+    exported: exportado,
+    currency: "DOP",
+    owed: state.deuda / 100,
+    payments: activos(state)
+      .sort((a, b) => b.fecha.localeCompare(a.fecha) || b.creado - a.creado)
+      .map((p) => {
+        const out = { id: p.id, date: p.fecha, amount: p.monto / 100 };
+        if (p.nota) out.note = p.nota;
+        if (recibos[p.id]) out.receipt = recibos[p.id];
+        return out;
+      })
+  };
+}
+
+function aCentavos(n) {
+  const v = Math.round(Number(n) * 100);
+  return Number.isSafeInteger(v) ? v : NaN;
+}
+
+// Lee un respaldo de la app de Hark ({ owed, payments }) o de la versión anterior ({ deuda, pagos }).
+// Devuelve { state, recibos } o null si el archivo no es válido.
+export function desdeRespaldo(obj, ahora = Date.now()) {
+  if (!obj || typeof obj !== "object") return null;
+  if (Array.isArray(obj.pagos)) {
+    const state = validarEstado(obj);
+    return state ? { state, recibos: {} } : null;
+  }
+  if (!Array.isArray(obj.payments) || obj.payments.length > MAX_PAGOS) return null;
+  const deuda = aCentavos(obj.owed);
+  if (!Number.isSafeInteger(deuda) || deuda < 0) return null;
+  const recibos = {};
+  const pagos = [];
+  // Hark guarda los pagos del más reciente al más antiguo; "creado" conserva ese orden al revés.
+  const n = obj.payments.length;
+  for (let i = 0; i < n; i++) {
+    const p = obj.payments[i] || {};
+    const monto = aCentavos(p.amount);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(p.date) || !Number.isSafeInteger(monto) || monto <= 0) return null;
+    const id = String(p.id || `${ahora.toString(36)}-${i}`).slice(0, 64);
+    pagos.push({ id, fecha: p.date, monto, nota: String(p.note || ""), creado: ahora - i, actualizado: ahora });
+    if (esRecibo(p.receipt)) recibos[id] = p.receipt;
+  }
+  const state = validarEstado({ nombre: obj.name, nombreActualizado: ahora, deuda, deudaActualizada: ahora, pagos });
+  return state ? { state, recibos } : null;
 }
