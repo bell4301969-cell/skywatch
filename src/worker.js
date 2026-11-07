@@ -7,6 +7,9 @@
 //   GET /api/geocode?q=                 place search
 //   GET /api/reverse?lat=&lon=          place name for a coordinate
 //   GET /api/radar                      latest precipitation radar frames (RainViewer)
+//   GET|PUT|DELETE /api/pagos           Control de Pagos sync, stored in D1 (see src/pagos.js)
+
+import { handlePagos } from "./pagos.js";
 
 const OPEN_METEO = "https://api.open-meteo.com/v1/forecast";
 const GEOCODE = "https://geocoding-api.open-meteo.com/v1/search";
@@ -33,6 +36,13 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(request);
+    if (url.pathname === "/api/pagos") {
+      try {
+        return await handlePagos(request, env);
+      } catch {
+        return json({ error: "Error del servidor de sincronización" }, 500);
+      }
+    }
     if (request.method !== "GET") return json({ error: "Method not allowed" }, 405);
 
     try {

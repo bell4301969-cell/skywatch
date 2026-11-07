@@ -1,0 +1,14 @@
+{
+  "name": "Control de Pagos",
+  "short_name": "Pagos",
+  "description": "Registra los pagos de una deuda y ve el saldo restante.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f5f1",
+  "theme_color": "#f6f5f1",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
