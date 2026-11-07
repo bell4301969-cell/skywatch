@@ -64,7 +64,7 @@ npx wrangler login
 npm run deploy   # publishes to https://skywatch.<your-subdomain>.workers.dev
 ```
 
-The `DB` binding has no `database_id`, so the first `npm run deploy` provisions the `skywatch-pagos` D1 database automatically and offers to write its id back into `wrangler.jsonc` (commit that change). To create it yourself instead, run `npx wrangler d1 create skywatch-pagos` and add the printed `database_id` to the binding. The Worker creates the `ledgers` table on first use. You can also apply the schema explicitly with `npx wrangler d1 migrations apply skywatch-pagos --remote` (or `--local` for `npm run dev`, which uses a local D1 in `.wrangler/`).
+The `DB` binding has no `database_id`, so recent Wrangler 4 releases create the `skywatch-pagos` D1 database automatically on the first `npm run deploy`. If yours does not, or you prefer to create it yourself, run `npx wrangler d1 create skywatch-pagos` and add the printed `database_id` to the binding. The Worker creates the `ledgers` table on first use. You can also apply the schema explicitly with `npx wrangler d1 migrations apply skywatch-pagos --remote` (or `--local` for `npm run dev`, which uses a local D1 in `.wrangler/`).
 
 ## Coverage notes
 
