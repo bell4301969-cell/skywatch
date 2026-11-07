@@ -14,6 +14,20 @@ A real-time weather app that runs on **Cloudflare Workers**. It shows:
   - Click anywhere on the map to load the forecast for that spot.
 - Place search, precise GPS location, °C/°F toggle and installable PWA. When you have not chosen a place, the app uses Cloudflare's IP geolocation (`request.cf`) for a first guess.
 
+## Control de Pagos (`/pagos/`)
+
+A second, standalone app served from the same Worker at `/pagos/` (Spanish UI). It tracks the payoff of a single debt:
+
+- **Saldo restante por pagar**: the remaining balance, with a progress bar and the percentage paid.
+- **Cantidad adeudada**: set or change the total owed; every payment is subtracted from it.
+- **Registrar un pago**: deposit date (defaults to today), amount and an optional note.
+- **Pagos registrados**: table of payments (newest first) with **Editar** to change or delete one (with undo), and the running total.
+- Overpayment shows as *saldo a favor*. Amounts are stored in cents to avoid rounding errors.
+- Menu (⋯): export to CSV, download/restore a JSON backup, erase everything.
+- Data stays on the device (`localStorage`); the app works offline and can be installed as a PWA.
+
+Files: `public/pagos/` (`calc.js` holds the pure logic, tested in `test/pagos.test.js`).
+
 ## Architecture
 
 ```
