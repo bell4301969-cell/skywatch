@@ -40,8 +40,12 @@ export function hoyISO(date = new Date()) {
   return `${date.getFullYear()}-${p(date.getMonth() + 1)}-${p(date.getDate())}`;
 }
 
+export function activos(state) {
+  return state.pagos.filter((p) => !p.borrado);
+}
+
 export function resumen(state) {
-  const pagos = [...state.pagos].sort((a, b) => a.fecha.localeCompare(b.fecha) || a.creado - b.creado);
+  const pagos = activos(state).sort((a, b) => a.fecha.localeCompare(b.fecha) || a.creado - b.creado);
   const pagado = pagos.reduce((t, p) => t + p.monto, 0);
   const deuda = state.deuda;
   const diff = deuda - pagado;
@@ -58,7 +62,7 @@ export function resumen(state) {
 
 export function toCSV(state) {
   const rows = [["Fecha", "Monto", "Nota"]];
-  for (const p of [...state.pagos].sort((a, b) => a.fecha.localeCompare(b.fecha))) {
+  for (const p of activos(state).sort((a, b) => a.fecha.localeCompare(b.fecha))) {
     rows.push([p.fecha, (p.monto / 100).toFixed(2), p.nota || ""]);
   }
   const r = resumen(state);
@@ -72,19 +76,64 @@ export function toCSV(state) {
   return rows.map((row) => row.map(esc).join(",")).join("\n");
 }
 
-// Valida y normaliza un estado leído de localStorage o de un respaldo importado.
+export const MAX_PAGOS = 5000;
+
+// Valida y normaliza un estado leído de localStorage, de un respaldo importado o del servidor.
+// Los pagos borrados se conservan como "lápidas" (borrado: true) para que el borrado se
+// propague al sincronizar; cada pago y la deuda llevan su hora de última modificación.
 export function validarEstado(obj) {
   if (!obj || typeof obj !== "object" || !Number.isSafeInteger(obj.deuda) || obj.deuda < 0 || !Array.isArray(obj.pagos)) return null;
+  if (obj.pagos.length > MAX_PAGOS) return null;
   const pagos = [];
+  const vistos = new Set();
   for (const p of obj.pagos) {
     if (!p || !/^\d{4}-\d{2}-\d{2}$/.test(p.fecha) || !Number.isSafeInteger(p.monto) || p.monto <= 0) return null;
-    pagos.push({
-      id: String(p.id || Math.random().toString(36).slice(2)),
-      fecha: p.fecha,
-      monto: p.monto,
-      nota: String(p.nota || "").slice(0, 200),
-      creado: Number(p.creado) || 0
-    });
+    const id = String(p.id || Math.random().toString(36).slice(2)).slice(0, 64);
+    if (vistos.has(id)) return null;
+    vistos.add(id);
+    const creado = Number(p.creado) || 0;
+    const pago = { id, fecha: p.fecha, monto: p.monto, nota: String(p.nota || "").slice(0, 200), creado, actualizado: Number(p.actualizado) || creado };
+    if (p.borrado) pago.borrado = true;
+    pagos.push(pago);
   }
-  return { deuda: obj.deuda, pagos };
+  return { deuda: obj.deuda, deudaActualizada: Number(obj.deudaActualizada) || 0, pagos };
+}
+
+// Fusiona dos copias del mismo libro: gana el cambio más reciente de cada pago y de la deuda.
+// Es conmutativa, así que da igual qué dispositivo sincronice primero.
+export function fusionar(a, b) {
+  const deudaDeB = b.deudaActualizada > a.deudaActualizada ||
+    (b.deudaActualizada === a.deudaActualizada && b.deuda > a.deuda);
+  const porId = new Map();
+  for (const p of [...a.pagos, ...b.pagos]) {
+    const actual = porId.get(p.id);
+    if (!actual || gana(p, actual)) porId.set(p.id, p);
+  }
+  return {
+    deuda: deudaDeB ? b.deuda : a.deuda,
+    deudaActualizada: Math.max(a.deudaActualizada, b.deudaActualizada),
+    pagos: [...porId.values()].sort((x, y) => x.creado - y.creado || (x.id < y.id ? -1 : 1))
+  };
+}
+
+function gana(p, q) {
+  if (p.actualizado !== q.actualizado) return p.actualizado > q.actualizado;
+  if (!!p.borrado !== !!q.borrado) return !!p.borrado; // ante empate, el borrado gana
+  return JSON.stringify(p) > JSON.stringify(q); // desempate determinista
+}
+
+// Código de sincronización: 16 caracteres sin letras ambiguas (80 bits), en grupos de 4.
+const ALFABETO = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+
+export function generarCodigo(random = (n) => crypto.getRandomValues(new Uint8Array(n))) {
+  const bytes = random(16);
+  let c = "";
+  for (let i = 0; i < 16; i++) c += ALFABETO[bytes[i] % 32];
+  return c.match(/.{4}/g).join("-");
+}
+
+export function normalizarCodigo(text) {
+  const s = String(text || "").toUpperCase().replace(/[^0-9A-Z]/g, "");
+  if (s.length !== 16 || [...s].some((ch) => !ALFABETO.includes(ch))) return null;
+  return s.match(/.{4}/g).join("-");
 }

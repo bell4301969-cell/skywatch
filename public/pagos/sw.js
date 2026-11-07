@@ -1,6 +1,6 @@
 // Control de Pagos: guarda la app en caché para que funcione sin conexión.
-// Los datos viven en localStorage, así que no hay nada que pedir a la red.
-const CACHE = "control-pagos-v1";
+// Los datos viven en localStorage (y en D1 si se activa la sincronización vía /api/pagos, fuera de este ámbito).
+const CACHE = "control-pagos-v2";
 const SHELL = ["./", "./index.html", "./app.js", "./calc.js", "./styles.css", "./manifest.webmanifest", "./icon.svg"];
 
 self.addEventListener("install", (e) => {

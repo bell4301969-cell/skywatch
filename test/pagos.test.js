@@ -54,5 +54,5 @@ test("validarEstado rechaza datos dañados", () => {
   assert.equal(validarEstado(null), null);
   assert.equal(validarEstado({ deuda: -1, pagos: [] }), null);
   assert.equal(validarEstado({ deuda: 1, pagos: [{ fecha: "ayer", monto: 1 }] }), null);
-  assert.deepEqual(validarEstado({ deuda: 5, pagos: [] }), { deuda: 5, pagos: [] });
+  assert.deepEqual(validarEstado({ deuda: 5, pagos: [] }), { deuda: 5, deudaActualizada: 0, pagos: [] });
 });
